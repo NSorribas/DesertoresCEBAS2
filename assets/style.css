@@ -136,6 +136,7 @@ a {
   height: 48px;
   flex-shrink: 0;
   border-radius: 12px;
+  object-fit: contain;
   box-shadow: 0 0 16px rgba(49, 164, 238, 0.25);
 }
 
@@ -1068,6 +1069,7 @@ tr[data-id]:hover {
   width: 64px;
   height: 64px;
   border-radius: 16px;
+  object-fit: contain;
   box-shadow: 0 4px 20px rgba(49, 164, 238, 0.3);
 }
 
