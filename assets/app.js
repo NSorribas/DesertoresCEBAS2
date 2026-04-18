@@ -251,6 +251,9 @@ const PersonasTabla = {
     tbody.innerHTML = pagina.map((p) => {
       const checked = this._seleccionados.has(p.id) ? "checked" : "";
 
+      const badgeClass = p.estado === "Activo" ? "badge-activo" : "badge-desertor";
+      const estadoBadge = `<span class="badge ${badgeClass}">${escaparHTML(p.estado || "Desertor/a")}</span>`;
+
       return `
         <tr data-id="${p.id}" onclick="verPersona('${p.id}')">
           <td style="text-align:center" onclick="event.stopPropagation()">
@@ -260,6 +263,7 @@ const PersonasTabla = {
           </td>
           <td>${escaparHTML(p.nombre)}</td>
           <td>${escaparHTML(p.dni)}</td>
+          <td style="text-align:right">${estadoBadge}</td>
         </tr>`;
     }).join("");
 

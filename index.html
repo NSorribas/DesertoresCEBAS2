@@ -117,7 +117,7 @@
       <div class="filter-bar">
         <select class="filter-select" id="filtroEstado" onchange="PersonasTabla.onFilter()">
           <option value="">Todos los estados</option>
-          <option value="Desertor/a">Desertor/a</option>
+          <option value="Desertor/a" selected>Desertor/a</option>
           <option value="Activo">Activo</option>
         </select>
       </div>
@@ -138,6 +138,7 @@
               </th>
               <th class="sortable" data-sort="nombre" onclick="PersonasTabla.onSort('nombre')">Nombre <span class="sort-arrow"></span></th>
               <th class="sortable" data-sort="dni" onclick="PersonasTabla.onSort('dni')">DNI <span class="sort-arrow"></span></th>
+              <th style="text-align:right">Estado</th>
             </tr>
           </thead>
           <tbody id="tbodyPersonas"></tbody>
