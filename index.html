@@ -42,11 +42,7 @@
       <p class="sidebar-subtitle">Registro de Estudiantes</p>
     </div>
     <nav class="sidebar-nav">
-      <a href="#/" class="nav-link active" data-page="inicio">
-        <span class="nav-icon">&#9751;</span>
-        Inicio
-      </a>
-      <a href="#/personas" class="nav-link" data-page="personas">
+      <a href="#/" class="nav-link active" data-page="personas">
         <span class="nav-icon">&#9775;</span>
         Personas
       </a>
@@ -75,29 +71,8 @@
   <main class="main-content" id="mainContent">
 
   
-
-    <!-- Página: Inicio -->
-    <section class="page active" id="page-inicio">
-      <h1>Bienvenido</h1>
-      <p>Sistema de registro y seguimiento de estudiantes del CEBAS.</p>
-      <div class="cards-grid">
-        <div class="card">
-          <h3>Total Personas</h3>
-          <p class="card-number" id="statTotal">0</p>
-        </div>
-        <div class="card">
-          <h3>Activos</h3>
-          <p class="card-number" id="statActivos">0</p>
-        </div>
-        <div class="card">
-          <h3>Inactivos</h3>
-          <p class="card-number" id="statInactivos">0</p>
-        </div>
-      </div>
-    </section>
-
     <!-- Página: Personas (listado) -->
-    <section class="page" id="page-personas">
+    <section class="page active" id="page-personas">
       <div class="page-header">
         <div>
           <h1>Personas</h1>
@@ -139,15 +114,10 @@
               <th style="width:40px;text-align:center" class="th-bulk">
                 <label class="checkbox-wrap">
                   <input type="checkbox" id="personas-select-all" onchange="PersonasTabla.toggleSeleccionarTodos(this.checked)">
-                  <span class="checkmark"></span>
                 </label>
               </th>
               <th class="sortable" data-sort="nombre" onclick="PersonasTabla.onSort('nombre')">Nombre <span class="sort-arrow"></span></th>
               <th class="sortable" data-sort="dni" onclick="PersonasTabla.onSort('dni')">DNI <span class="sort-arrow"></span></th>
-              <th class="sortable" data-sort="edad" onclick="PersonasTabla.onSort('edad')">Edad <span class="sort-arrow"></span></th>
-              <th class="sortable" data-sort="curso" onclick="PersonasTabla.onSort('curso')">Curso <span class="sort-arrow"></span></th>
-              <th class="sortable" data-sort="estado" onclick="PersonasTabla.onSort('estado')">Estado <span class="sort-arrow"></span></th>
-              <th style="width:120px">Acciones</th>
             </tr>
           </thead>
           <tbody id="tbodyPersonas"></tbody>
@@ -166,6 +136,25 @@
   </main>
 
   </div><!-- fin app-wrapper -->
+
+  <!-- Modal Persona (detalle/ver) -->
+  <div class="modal" id="modalVerPersona">
+    <div class="modal-content modal-lg">
+      <div class="modal-header">
+        <h2 id="verPersonaNombre">Persona</h2>
+        <button class="modal-close" onclick="cerrarModalVerPersona()">&times;</button>
+      </div>
+      <div class="modal-body" id="verPersonaBody">
+        <!-- Se llena dinámicamente -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-danger" id="btnVerEliminar" onclick="eliminarDesdeVista()">Eliminar</button>
+        <div style="flex:1"></div>
+        <button class="btn btn-secondary" onclick="cerrarModalVerPersona()">Cerrar</button>
+        <button class="btn btn-primary" id="btnVerEditar" onclick="editarDesdeVista()">Editar</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Modal Persona (agregar/editar) -->
   <div class="modal" id="modalPersona">

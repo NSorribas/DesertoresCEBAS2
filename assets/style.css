@@ -656,6 +656,61 @@ tbody tr:last-child td {
   justify-content: flex-end;
 }
 
+/* ===== Modal Footer (detalle) ===== */
+.modal-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 28px;
+  border-top: 1px solid var(--color-border);
+}
+
+/* ===== Modal Body (detalle) ===== */
+.modal-body {
+  padding: 24px 28px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.detail-item {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-bg);
+}
+
+.detail-item.full-width {
+  grid-column: 1 / -1;
+}
+
+.detail-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-text-light);
+  margin-bottom: 4px;
+}
+
+.detail-value {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-text);
+  word-break: break-word;
+}
+
+/* ===== Fila clickeable ===== */
+tr[data-id] {
+  cursor: pointer;
+}
+
+tr[data-id]:hover {
+  background: #eaf2f8 !important;
+}
+
 /* ===== Toast ===== */
 .toast {
   position: fixed;

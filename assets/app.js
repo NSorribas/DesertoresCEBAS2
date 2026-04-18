@@ -38,7 +38,6 @@ function iniciarFirebase() {
     console.warn("Firebase no configurado. Usando datos locales (localStorage).");
     cargarDatosLocales();
     mostrarApp();
-    renderizarInicio();
   }
 }
 
@@ -164,7 +163,6 @@ function escucharPersonas() {
           id: doc.id,
           ...doc.data()
         }));
-        renderizarInicio();
         PersonasTabla.actualizarFiltroCursos();
         const paginaActual = obtenerPaginaActual();
         if (paginaActual === "personas") {
@@ -182,7 +180,6 @@ function escucharPersonas() {
 function cargarDatosLocales() {
   const datos = localStorage.getItem("ceb_personas");
   personas = datos ? JSON.parse(datos) : [];
-  renderizarInicio();
 }
 
 function guardarDatosLocales() {
@@ -217,9 +214,7 @@ function manejarRuta() {
   });
 
   // Acciones por página
-  if (pagina === "inicio") {
-    renderizarInicio();
-  } else if (pagina === "personas") {
+  if (pagina === "personas") {
     PersonasTabla.render();
   }
 
@@ -228,19 +223,12 @@ function manejarRuta() {
 }
 
 function obtenerPaginaActual() {
-  const hash = (window.location.hash || "#/").replace("#/", "");
-  return hash || "inicio";
+  const hash = (window.location.hash || "#/personas").replace("#/", "");
+  return hash || "personas";
 }
 
 function navegarA(ruta) {
   window.location.hash = ruta;
-}
-
-// ===== DASHBOARD / INICIO =====
-function renderizarInicio() {
-  document.getElementById("statTotal").textContent = personas.length;
-  document.getElementById("statActivos").textContent = personas.filter(p => p.estado === "Activo").length;
-  document.getElementById("statInactivos").textContent = personas.filter(p => p.estado === "Inactivo").length;
 }
 
 // ===== PERSONAS TABLA (con paginación, filtros, sort, bulk) =====
@@ -317,30 +305,17 @@ const PersonasTabla = {
     sinResultados.style.display = "none";
 
     tbody.innerHTML = pagina.map((p) => {
-      const edad = calcularEdad(p.fechaNacimiento);
-      const badgeClass = p.estado === "Activo" ? "badge-activo"
-                       : p.estado === "Inactivo" ? "badge-inactivo"
-                       : "badge-egresado";
       const checked = this._seleccionados.has(p.id) ? "checked" : "";
 
       return `
-        <tr>
-          <td style="text-align:center">
+        <tr data-id="${p.id}" onclick="verPersona('${p.id}')">
+          <td style="text-align:center" onclick="event.stopPropagation()">
             <label class="checkbox-wrap">
               <input type="checkbox" ${checked} onchange="PersonasTabla.toggleSeleccion('${p.id}', this.checked)">
             </label>
           </td>
           <td>${escaparHTML(p.nombre)}</td>
           <td>${escaparHTML(p.dni)}</td>
-          <td>${edad}</td>
-          <td>${escaparHTML(p.curso || "-")}</td>
-          <td><span class="badge ${badgeClass}">${escaparHTML(p.estado || "Activo")}</span></td>
-          <td>
-            <div class="actions-cell">
-              <button class="btn btn-primary btn-sm" onclick="editarPersona('${p.id}')">Editar</button>
-              <button class="btn btn-danger btn-sm" onclick="confirmarEliminar('${p.id}')">Eliminar</button>
-            </div>
-          </td>
         </tr>`;
     }).join("");
 
@@ -499,9 +474,8 @@ const PersonasTabla = {
       } else {
         personas = personas.filter(p => !this._seleccionados.has(p.id));
         guardarDatosLocales();
-        renderizarInicio();
-        mostrarToast(`${count} persona${count > 1 ? "s" : ""} eliminada${count > 1 ? "s" : ""}.`, "success");
       }
+      mostrarToast(`${count} persona${count > 1 ? "s" : ""} eliminada${count > 1 ? "s" : ""}.`, "success");
       this._seleccionados.clear();
       this.render();
     };
@@ -509,7 +483,7 @@ const PersonasTabla = {
   }
 };
 
-// ===== MODAL PERSONA =====
+// ===== MODAL VER PERSONA (detalle) =====\nlet verPersonaIdActual = null;\n\nfunction verPersona(id) {\n  const persona = personas.find((p) => p.id === id);\n  if (!persona) return;\n  verPersonaIdActual = id;\n\n  document.getElementById(\"verPersonaNombre\").textContent = persona.nombre;\n\n  const edad = calcularEdad(persona.fechaNacimiento);\n  const badgeClass = persona.estado === \"Activo\" ? \"badge-activo\"\n                   : persona.estado === \"Inactivo\" ? \"badge-inactivo\"\n                   : \"badge-egresado\";\n\n  document.getElementById(\"verPersonaBody\").innerHTML = `\n    <div class=\"detail-grid\">\n      <div class=\"detail-item\">\n        <div class=\"detail-label\">DNI</div>\n        <div class=\"detail-value\">${escaparHTML(persona.dni || \"-\")}</div>\n      </div>\n      <div class=\"detail-item\">\n        <div class=\"detail-label\">Edad</div>\n        <div class=\"detail-value\">${edad}</div>\n      </div>\n      <div class=\"detail-item\">\n        <div class=\"detail-label\">Fecha de nacimiento</div>\n        <div class=\"detail-value\">${persona.fechaNacimiento ? formatearFecha(persona.fechaNacimiento) : \"-\"}</div>\n      </div>\n      <div class=\"detail-item\">\n        <div class=\"detail-label\">Género</div>\n        <div class=\"detail-value\">${escaparHTML(persona.genero || \"-\")}</div>\n      </div>\n      <div class=\"detail-item\">\n        <div class=\"detail-label\">Teléfono</div>\n        <div class=\"detail-value\">${escaparHTML(persona.telefono || \"-\")}</div>\n      </div>\n      <div class=\"detail-item\">\n        <div class=\"detail-label\">Email</div>\n        <div class=\"detail-value\">${escaparHTML(persona.email || \"-\")}</div>\n      </div>\n      <div class=\"detail-item full-width\">\n        <div class=\"detail-label\">Dirección</div>\n        <div class=\"detail-value\">${escaparHTML(persona.direccion || \"-\")}</div>\n      </div>\n      <div class=\"detail-item full-width\">\n        <div class=\"detail-label\">Tutor / Apoderado</div>\n        <div class=\"detail-value\">${escaparHTML(persona.tutor || \"-\")}</div>\n      </div>\n      <div class=\"detail-item\">\n        <div class=\"detail-label\">Curso / División</div>\n        <div class=\"detail-value\">${escaparHTML(persona.curso || \"-\")}</div>\n      </div>\n      <div class=\"detail-item\">\n        <div class=\"detail-label\">Estado</div>\n        <div class=\"detail-value\"><span class=\"badge ${badgeClass}\">${escaparHTML(persona.estado || \"Activo\")}</span></div>\n      </div>\n      <div class=\"detail-item full-width\">\n        <div class=\"detail-label\">Observaciones</div>\n        <div class=\"detail-value\">${escaparHTML(persona.observaciones || \"-\")}</div>\n      </div>\n    </div>\n  `;\n\n  document.getElementById(\"modalVerPersona\").classList.add(\"show\");\n}\n\nfunction cerrarModalVerPersona() {\n  document.getElementById(\"modalVerPersona\").classList.remove(\"show\");\n  verPersonaIdActual = null;\n}\n\nfunction editarDesdeVista() {\n  const id = verPersonaIdActual;\n  cerrarModalVerPersona();\n setTimeout(() => abrirModalPersona(id), 200);\n}\n\nfunction eliminarDesdeVista() {\n  const id = verPersonaIdActual;\n  cerrarModalVerPersona();\n setTimeout(() => confirmarEliminar(id), 200);\n}\n\n// ===== MODAL PERSONA (agregar/editar) =====
 function abrirModalPersona(id) {
   const modal = document.getElementById("modalPersona");
   reiniciarFormulario();
@@ -597,7 +571,6 @@ function guardarPersona(event) {
       datos.id = "local_" + Date.now();
       personas.push(datos);
       guardarDatosLocales();
-      renderizarInicio();
       mostrarToast("Persona registrada.", "success"); cerrarModalPersona();
     }
   }
@@ -627,12 +600,11 @@ function confirmarEliminar(id) {
 function eliminarPersona(id) {
   if (db) {
     db.collection("personas").doc(id).delete()
-      .then(() => { mostrarToast("Persona eliminada.", "success"); PersonasTabla.render(); renderizarInicio(); })
+      .then(() => { mostrarToast("Persona eliminada.", "success"); PersonasTabla.render(); })
       .catch((err) => { console.error(err); mostrarToast("Error al eliminar.", "error"); });
   } else {
     personas = personas.filter((p) => p.id !== id);
     guardarDatosLocales();
-    renderizarInicio();
     PersonasTabla.render();
     mostrarToast("Persona eliminada.", "success");
   }
@@ -686,4 +658,10 @@ function escaparHTML(texto) {
   const div = document.createElement("div");
   div.textContent = texto;
   return div.innerHTML;
+}
+
+function formatearFecha(fechaStr) {
+  if (!fechaStr) return "-";
+  const [year, month, day] = fechaStr.split("-");
+  return `${day}/${month}/${year}`;
 }
