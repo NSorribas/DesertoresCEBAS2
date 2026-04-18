@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Desertores CEBAS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
@@ -12,7 +15,14 @@
   <div class="auth-screen" id="authScreen">
     <div class="auth-container">
       <div class="auth-header">
-        <h1>CEBAS</h1>
+        <div class="auth-logo-wrap">
+          <svg class="auth-logo" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="48" height="48" rx="12" fill="#31a4ee"/>
+            <path d="M24 10C20.13 10 17 13.13 17 17C17 20.87 20.13 24 24 24C27.87 24 31 20.87 31 17C31 13.13 27.87 10 24 10Z" fill="white"/>
+            <path d="M14 38V35C14 30.58 17.58 27 22 27H26C30.42 27 34 30.58 34 35V38" stroke="white" stroke-width="3" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h1>DESERTORES</h1>
         <p>Registro de Estudiantes</p>
       </div>
 
@@ -38,16 +48,36 @@
   <!-- Sidebar -->
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
-      <h2 class="sidebar-title">CEBAS</h2>
-      <p class="sidebar-subtitle">Registro de Estudiantes</p>
+      <div class="sidebar-brand">
+        <svg class="sidebar-logo" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="48" height="48" rx="12" fill="#31a4ee"/>
+          <path d="M24 10C20.13 10 17 13.13 17 17C17 20.87 20.13 24 24 24C27.87 24 31 20.87 31 17C31 13.13 27.87 10 24 10Z" fill="white"/>
+          <path d="M14 38V35C14 30.58 17.58 27 22 27H26C30.42 27 34 30.58 34 35V38" stroke="white" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+        <div class="sidebar-text">
+          <h2 class="sidebar-title">DESERTORES</h2>
+          <p class="sidebar-subtitle">CEBAS</p>
+        </div>
+      </div>
     </div>
     <nav class="sidebar-nav">
       <a href="#/" class="nav-link active" data-page="personas">
-        <span class="nav-icon">&#9775;</span>
+        <span class="nav-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+        </span>
         Personas
       </a>
       <a href="#/reportes" class="nav-link" data-page="reportes">
-        <span class="nav-icon">&#9776;</span>
+        <span class="nav-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="20" x2="18" y2="10"/>
+            <line x1="12" y1="20" x2="12" y2="4"/>
+            <line x1="6" y1="20" x2="6" y2="14"/>
+          </svg>
+        </span>
         Reportes
       </a>
     </nav>
@@ -92,7 +122,7 @@
         </select>
       </div>
       <!-- Tabla -->
-      <div class="table-card">
+      <div class="table-card glass-card">
         <div id="personas-bulk-bar" style="display:none" class="bulk-bar">
           <span id="personas-bulk-count">0 seleccionados</span>
           <button class="btn btn-sm btn-danger" onclick="PersonasTabla.eliminarSeleccionados()">Eliminar selección</button>
@@ -129,7 +159,7 @@
 
   <!-- Modal Persona (detalle/ver) -->
   <div class="modal" id="modalVerPersona">
-    <div class="modal-content modal-lg">
+    <div class="modal-content modal-lg glass-card">
       <div class="modal-header">
         <h2 id="verPersonaNombre">Persona</h2>
         <button class="modal-close" onclick="cerrarModalVerPersona()">&times;</button>
@@ -148,7 +178,7 @@
 
   <!-- Modal Persona (agregar/editar) -->
   <div class="modal" id="modalPersona">
-    <div class="modal-content modal-lg">
+    <div class="modal-content modal-lg glass-card">
       <div class="modal-header">
         <h2 id="modalPersonaTitulo">Agregar Persona</h2>
         <button class="modal-close" onclick="cerrarModalPersona()">&times;</button>
@@ -225,7 +255,7 @@
 
   <!-- Modal de confirmación -->
   <div class="modal" id="modalConfirmar">
-    <div class="modal-content">
+    <div class="modal-content glass-card">
       <p id="modalMensaje">¿Estás seguro?</p>
       <div class="modal-actions">
         <button class="btn btn-danger" id="modalBtnConfirmar">Eliminar</button>
