@@ -50,10 +50,6 @@
         <span class="nav-icon">&#9775;</span>
         Personas
       </a>
-      <a href="#/registrar" class="nav-link" data-page="registrar">
-        <span class="nav-icon">&#10010;</span>
-        Registrar
-      </a>
       <a href="#/reportes" class="nav-link" data-page="reportes">
         <span class="nav-icon">&#9776;</span>
         Reportes
@@ -103,43 +99,87 @@
     <!-- Página: Personas (listado) -->
     <section class="page" id="page-personas">
       <div class="page-header">
-        <h1>Personas</h1>
-        <button class="btn btn-primary" onclick="navegarA('/registrar')">+ Nueva Persona</button>
+        <div>
+          <h1>Personas</h1>
+          <p>Buscá y gestioná el registro de estudiantes</p>
+        </div>
+        <button class="btn btn-primary" onclick="abrirModalPersona()">+ Agregar persona</button>
       </div>
       <div class="search-bar">
-        <input type="text" id="buscarPersona" placeholder="Buscar por nombre, DNI..." oninput="filtrarPersonas()">
+        <input type="text" id="buscarPersona" placeholder="Buscar por nombre, DNI, curso..." oninput="PersonasTabla.onSearch()">
       </div>
-      <div class="table-container">
+      <!-- Filtros -->
+      <div class="filter-bar">
+        <select class="filter-select" id="filtroEstado" onchange="PersonasTabla.onFilter()">
+          <option value="">Todos los estados</option>
+          <option value="Activo">Activo</option>
+          <option value="Inactivo">Inactivo</option>
+          <option value="Egresado">Egresado</option>
+        </select>
+        <select class="filter-select" id="filtroGenero" onchange="PersonasTabla.onFilter()">
+          <option value="">Todos los géneros</option>
+          <option value="Masculino">Masculino</option>
+          <option value="Femenino">Femenino</option>
+          <option value="Otro">Otro</option>
+        </select>
+        <select class="filter-select" id="filtroCurso" onchange="PersonasTabla.onFilter()">
+          <option value="">Todos los cursos</option>
+        </select>
+      </div>
+      <!-- Tabla -->
+      <div class="table-card">
+        <div id="personas-bulk-bar" style="display:none" class="bulk-bar">
+          <span id="personas-bulk-count">0 seleccionados</span>
+          <button class="btn btn-sm btn-danger" onclick="PersonasTabla.eliminarSeleccionados()">Eliminar selección</button>
+          <button class="btn btn-sm btn-secondary" onclick="PersonasTabla.deseleccionarTodos()">Cancelar</button>
+        </div>
         <table id="tablaPersonas">
           <thead>
             <tr>
-              <th>Nombre</th>
-              <th>DNI</th>
-              <th>Edad</th>
-              <th>Curso</th>
-              <th>Estado</th>
-              <th>Acciones</th>
+              <th style="width:40px;text-align:center" class="th-bulk">
+                <label class="checkbox-wrap">
+                  <input type="checkbox" id="personas-select-all" onchange="PersonasTabla.toggleSeleccionarTodos(this.checked)">
+                  <span class="checkmark"></span>
+                </label>
+              </th>
+              <th class="sortable" data-sort="nombre" onclick="PersonasTabla.onSort('nombre')">Nombre <span class="sort-arrow"></span></th>
+              <th class="sortable" data-sort="dni" onclick="PersonasTabla.onSort('dni')">DNI <span class="sort-arrow"></span></th>
+              <th class="sortable" data-sort="edad" onclick="PersonasTabla.onSort('edad')">Edad <span class="sort-arrow"></span></th>
+              <th class="sortable" data-sort="curso" onclick="PersonasTabla.onSort('curso')">Curso <span class="sort-arrow"></span></th>
+              <th class="sortable" data-sort="estado" onclick="PersonasTabla.onSort('estado')">Estado <span class="sort-arrow"></span></th>
+              <th style="width:120px">Acciones</th>
             </tr>
           </thead>
-          <tbody id="tbodyPersonas">
-            <!-- Se llena dinámicamente -->
-          </tbody>
+          <tbody id="tbodyPersonas"></tbody>
         </table>
         <p id="sinResultados" class="empty-msg" style="display:none;">No se encontraron personas.</p>
+        <div id="pagination-personas"></div>
       </div>
     </section>
 
-    <!-- Página: Registrar persona -->
-    <section class="page" id="page-registrar">
-      <h1 id="tituloFormulario">Registrar Persona</h1>
+    <!-- Página: Reportes -->
+    <section class="page" id="page-reportes">
+      <h1>Reportes</h1>
+      <p>Próximamente reportes y estadísticas.</p>
+    </section>
+
+  </main>
+
+  </div><!-- fin app-wrapper -->
+
+  <!-- Modal Persona (agregar/editar) -->
+  <div class="modal" id="modalPersona">
+    <div class="modal-content modal-lg">
+      <div class="modal-header">
+        <h2 id="modalPersonaTitulo">Agregar Persona</h2>
+        <button class="modal-close" onclick="cerrarModalPersona()">&times;</button>
+      </div>
       <form id="formPersona" class="form-persona" onsubmit="guardarPersona(event)">
         <input type="hidden" id="personaId" value="">
-
         <div class="form-group">
           <label for="nombre">Nombre completo *</label>
           <input type="text" id="nombre" required placeholder="Ej: Juan Pérez">
         </div>
-
         <div class="form-row">
           <div class="form-group">
             <label for="dni">DNI *</label>
@@ -150,7 +190,6 @@
             <input type="date" id="fechaNacimiento" required>
           </div>
         </div>
-
         <div class="form-row">
           <div class="form-group">
             <label for="genero">Género</label>
@@ -166,22 +205,18 @@
             <input type="tel" id="telefono" placeholder="Ej: 3815551234">
           </div>
         </div>
-
         <div class="form-group">
           <label for="email">Email</label>
           <input type="email" id="email" placeholder="Ej: juan@email.com">
         </div>
-
         <div class="form-group">
           <label for="direccion">Dirección</label>
           <input type="text" id="direccion" placeholder="Ej: Av. Sáenz Peña 123">
         </div>
-
         <div class="form-group">
           <label for="tutor">Nombre del tutor / apoderado</label>
           <input type="text" id="tutor" placeholder="Ej: María Pérez">
         </div>
-
         <div class="form-row">
           <div class="form-group">
             <label for="curso">Curso / División</label>
@@ -196,28 +231,17 @@
             </select>
           </div>
         </div>
-
         <div class="form-group">
           <label for="observaciones">Observaciones</label>
           <textarea id="observaciones" rows="3" placeholder="Notas adicionales..."></textarea>
         </div>
-
         <div class="form-actions">
           <button type="submit" class="btn btn-primary" id="btnGuardar">Guardar</button>
-          <button type="button" class="btn btn-secondary" onclick="navegarA('/personas')">Cancelar</button>
+          <button type="button" class="btn btn-secondary" onclick="cerrarModalPersona()">Cancelar</button>
         </div>
       </form>
-    </section>
-
-    <!-- Página: Reportes -->
-    <section class="page" id="page-reportes">
-      <h1>Reportes</h1>
-      <p>Próximamente reportes y estadísticas.</p>
-    </section>
-
-  </main>
-
-  </div><!-- fin app-wrapper -->
+    </div>
+  </div>
 
   <!-- Modal de confirmación -->
   <div class="modal" id="modalConfirmar">

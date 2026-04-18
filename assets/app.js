@@ -165,10 +165,10 @@ function escucharPersonas() {
           ...doc.data()
         }));
         renderizarInicio();
-        // Si estamos en la página de personas, actualizar tabla
+        PersonasTabla.actualizarFiltroCursos();
         const paginaActual = obtenerPaginaActual();
         if (paginaActual === "personas") {
-          renderizarTabla(personas);
+          PersonasTabla.render();
         }
       },
       (error) => {
@@ -220,10 +220,7 @@ function manejarRuta() {
   if (pagina === "inicio") {
     renderizarInicio();
   } else if (pagina === "personas") {
-    renderizarTabla(personas);
-    reiniciarFormulario();
-  } else if (pagina === "registrar") {
-    reiniciarFormulario();
+    PersonasTabla.render();
   }
 
   // Cerrar menú mobile
@@ -246,28 +243,93 @@ function renderizarInicio() {
   document.getElementById("statInactivos").textContent = personas.filter(p => p.estado === "Inactivo").length;
 }
 
-// ===== TABLA DE PERSONAS =====
-function renderizarTabla(lista) {
-  const tbody = document.getElementById("tbodyPersonas");
-  const sinResultados = document.getElementById("sinResultados");
+// ===== PERSONAS TABLA (con paginación, filtros, sort, bulk) =====
+const PersonasTabla = {
+  ITEMS_POR_PAGINA: 10,
+  _page: 1,
+  _sortField: "nombre",
+  _sortDir: "asc",
+  _seleccionados: new Set(),
+  _debounceTimer: null,
 
-  if (lista.length === 0) {
-    tbody.innerHTML = "";
-    sinResultados.style.display = "block";
-    return;
-  }
+  // --- Obtener datos filtrados y ordenados ---
+  _getDatosFiltrados() {
+    const query = (document.getElementById("buscarPersona").value || "").toLowerCase().trim();
+    const fEstado = document.getElementById("filtroEstado").value;
+    const fGenero = document.getElementById("filtroGenero").value;
+    const fCurso = document.getElementById("filtroCurso").value;
 
-  sinResultados.style.display = "none";
+    let datos = personas.filter((p) => {
+      const matchQuery = !query ||
+        (p.nombre || "").toLowerCase().includes(query) ||
+        (p.dni || "").toLowerCase().includes(query) ||
+        (p.curso || "").toLowerCase().includes(query);
+      const matchEstado = !fEstado || p.estado === fEstado;
+      const matchGenero = !fGenero || p.genero === fGenero;
+      const matchCurso = !fCurso || p.curso === fCurso;
+      return matchQuery && matchEstado && matchGenero && matchCurso;
+    });
 
-  tbody.innerHTML = lista
-    .map((p) => {
+    // Ordenar
+    const campo = this._sortField;
+    const dir = this._sortDir === "asc" ? 1 : -1;
+    datos.sort((a, b) => {
+      let valA, valB;
+      if (campo === "edad") {
+        valA = calcularEdad(a.fechaNacimiento);
+        valB = calcularEdad(b.fechaNacimiento);
+        if (valA === "-" && valB === "-") return 0;
+        if (valA === "-") return 1;
+        if (valB === "-") return -1;
+        return (valA - valB) * dir;
+      } else {
+        valA = (a[campo] || "").toString().toLowerCase();
+        valB = (b[campo] || "").toString().toLowerCase();
+      }
+      return valA.localeCompare(valB, "es") * dir;
+    });
+
+    return datos;
+  },
+
+  // --- Render principal ---
+  render() {
+    const datos = this._getDatosFiltrados();
+    const total = datos.length;
+    const totalPages = Math.max(1, Math.ceil(total / this.ITEMS_POR_PAGINA));
+    if (this._page > totalPages) this._page = totalPages;
+    const inicio = (this._page - 1) * this.ITEMS_POR_PAGINA;
+    const pagina = datos.slice(inicio, inicio + this.ITEMS_POR_PAGINA);
+
+    const tbody = document.getElementById("tbodyPersonas");
+    const sinResultados = document.getElementById("sinResultados");
+
+    this._actualizarSortHeaders();
+    this._actualizarBulkBar();
+
+    if (total === 0) {
+      tbody.innerHTML = "";
+      sinResultados.style.display = "block";
+      document.getElementById("pagination-personas").innerHTML = "";
+      return;
+    }
+
+    sinResultados.style.display = "none";
+
+    tbody.innerHTML = pagina.map((p) => {
       const edad = calcularEdad(p.fechaNacimiento);
       const badgeClass = p.estado === "Activo" ? "badge-activo"
                        : p.estado === "Inactivo" ? "badge-inactivo"
                        : "badge-egresado";
+      const checked = this._seleccionados.has(p.id) ? "checked" : "";
 
       return `
         <tr>
+          <td style="text-align:center">
+            <label class="checkbox-wrap">
+              <input type="checkbox" ${checked} onchange="PersonasTabla.toggleSeleccion('${p.id}', this.checked)">
+            </label>
+          </td>
           <td>${escaparHTML(p.nombre)}</td>
           <td>${escaparHTML(p.dni)}</td>
           <td>${edad}</td>
@@ -279,21 +341,214 @@ function renderizarTabla(lista) {
               <button class="btn btn-danger btn-sm" onclick="confirmarEliminar('${p.id}')">Eliminar</button>
             </div>
           </td>
-        </tr>
-      `;
-    })
-    .join("");
+        </tr>`;
+    }).join("");
+
+    this._renderPaginacion(totalPages, total);
+  },
+
+  // --- Paginación ---
+  _renderPaginacion(totalPages, total) {
+    const container = document.getElementById("pagination-personas");
+    if (totalPages <= 1) { container.innerHTML = ""; return; }
+
+    const inicio = (this._page - 1) * this.ITEMS_POR_PAGINA + 1;
+    const fin = Math.min(this._page * this.ITEMS_POR_PAGINA, total);
+
+    let html = '<div class="pagination">';
+    html += `<button ${this._page <= 1 ? "disabled" : ""} onclick="PersonasTabla._page=1;PersonasTabla.render()">&laquo;</button>`;
+    html += `<button ${this._page <= 1 ? "disabled" : ""} onclick="PersonasTabla._page--;PersonasTabla.render()">&lsaquo;</button>`;
+
+    // Rango de páginas
+    let startPage = Math.max(1, this._page - 2);
+    let endPage = Math.min(totalPages, this._page + 2);
+    if (startPage > 1) {
+      html += `<button onclick="PersonasTabla._page=1;PersonasTabla.render()">1</button>`;
+      if (startPage > 2) html += `<span class="page-info">...</span>`;
+    }
+    for (let i = startPage; i <= endPage; i++) {
+      html += `<button class="${i === this._page ? 'active' : ''}" onclick="PersonasTabla._page=${i};PersonasTabla.render()">${i}</button>`;
+    }
+    if (endPage < totalPages) {
+      if (endPage < totalPages - 1) html += `<span class="page-info">...</span>`;
+      html += `<button onclick="PersonasTabla._page=${totalPages};PersonasTabla.render()">${totalPages}</button>`;
+    }
+
+    html += `<button ${this._page >= totalPages ? "disabled" : ""} onclick="PersonasTabla._page++;PersonasTabla.render()">&rsaquo;</button>`;
+    html += `<button ${this._page >= totalPages ? "disabled" : ""} onclick="PersonasTabla._page=${totalPages};PersonasTabla.render()">&raquo;</button>`;
+    html += `<span class="page-info">${inicio}-${fin} de ${total}</span>`;
+    html += '</div>';
+    container.innerHTML = html;
+  },
+
+  // --- Sorting ---
+  onSort(field) {
+    if (this._sortField === field) {
+      this._sortDir = this._sortDir === "asc" ? "desc" : "asc";
+    } else {
+      this._sortField = field;
+      this._sortDir = "asc";
+    }
+    this._page = 1;
+    this.render();
+  },
+
+  _actualizarSortHeaders() {
+    document.querySelectorAll("#tablaPersonas .sortable").forEach((th) => {
+      th.classList.remove("sort-asc", "sort-desc");
+      const field = th.getAttribute("data-sort");
+      if (field === this._sortField) {
+        th.classList.add(this._sortDir === "asc" ? "sort-asc" : "sort-desc");
+      }
+    });
+  },
+
+  // --- Búsqueda con debounce ---
+  onSearch() {
+    clearTimeout(this._debounceTimer);
+    this._debounceTimer = setTimeout(() => {
+      this._page = 1;
+      this._seleccionados.clear();
+      this.render();
+    }, 300);
+  },
+
+  // --- Filtros ---
+  onFilter() {
+    this._page = 1;
+    this._seleccionados.clear();
+    this.render();
+  },
+
+  actualizarFiltroCursos() {
+    const select = document.getElementById("filtroCurso");
+    const current = select.value;
+    const cursos = [...new Set(personas.map(p => p.curso).filter(Boolean))].sort((a, b) => a.localeCompare(b, "es"));
+    select.innerHTML = '<option value="">Todos los cursos</option>' +
+      cursos.map(c => `<option value="${escaparHTML(c)}">${escaparHTML(c)}</option>`).join("");
+    select.value = current;
+  },
+
+  // --- Selección múltiple ---
+  toggleSeleccion(id, checked) {
+    if (checked) {
+      this._seleccionados.add(id);
+    } else {
+      this._seleccionados.delete(id);
+    }
+    this._actualizarBulkBar();
+    this._actualizarSelectAll();
+  },
+
+  toggleSeleccionarTodos(checked) {
+    const datos = this._getDatosFiltrados();
+    const inicio = (this._page - 1) * this.ITEMS_POR_PAGINA;
+    const pagina = datos.slice(inicio, inicio + this.ITEMS_POR_PAGINA);
+    pagina.forEach(p => {
+      if (checked) this._seleccionados.add(p.id);
+      else this._seleccionados.delete(p.id);
+    });
+    this._actualizarBulkBar();
+    this.render();
+  },
+
+  deseleccionarTodos() {
+    this._seleccionados.clear();
+    document.getElementById("personas-select-all").checked = false;
+    this._actualizarBulkBar();
+    this.render();
+  },
+
+  _actualizarBulkBar() {
+    const bar = document.getElementById("personas-bulk-bar");
+    const count = this._seleccionados.size;
+    if (count > 0) {
+      bar.style.display = "flex";
+      document.getElementById("personas-bulk-count").textContent = `${count} seleccionados`;
+    } else {
+      bar.style.display = "none";
+    }
+  },
+
+  _actualizarSelectAll() {
+    const datos = this._getDatosFiltrados();
+    const inicio = (this._page - 1) * this.ITEMS_POR_PAGINA;
+    const pagina = datos.slice(inicio, inicio + this.ITEMS_POR_PAGINA);
+    const allChecked = pagina.length > 0 && pagina.every(p => this._seleccionados.has(p.id));
+    document.getElementById("personas-select-all").checked = allChecked;
+  },
+
+  // --- Eliminar seleccionados ---
+  eliminarSeleccionados() {
+    if (this._seleccionados.size === 0) return;
+    const count = this._seleccionados.size;
+    const modal = document.getElementById("modalConfirmar");
+    document.getElementById("modalMensaje").textContent =
+      `¿Estás seguro de eliminar ${count} persona${count > 1 ? "s" : ""}?`;
+    modal.classList.add("show");
+
+    document.getElementById("modalBtnConfirmar").onclick = () => {
+      modal.classList.remove("show");
+      const ids = [...this._seleccionados];
+      let promises = [];
+      if (db) {
+        ids.forEach(id => promises.push(db.collection("personas").doc(id).delete()));
+        Promise.all(promises)
+          .then(() => mostrarToast(`${count} persona${count > 1 ? "s" : ""} eliminada${count > 1 ? "s" : ""}.`, "success"))
+          .catch(err => { console.error(err); mostrarToast("Error al eliminar.", "error"); });
+      } else {
+        personas = personas.filter(p => !this._seleccionados.has(p.id));
+        guardarDatosLocales();
+        renderizarInicio();
+        mostrarToast(`${count} persona${count > 1 ? "s" : ""} eliminada${count > 1 ? "s" : ""}.`, "success");
+      }
+      this._seleccionados.clear();
+      this.render();
+    };
+    document.getElementById("modalBtnCancelar").onclick = () => modal.classList.remove("show");
+  }
+};
+
+// ===== MODAL PERSONA =====
+function abrirModalPersona(id) {
+  const modal = document.getElementById("modalPersona");
+  reiniciarFormulario();
+
+  if (id) {
+    const persona = personas.find((p) => p.id === id);
+    if (!persona) return;
+    personaEditandoId = id;
+    document.getElementById("modalPersonaTitulo").textContent = "Editar Persona";
+    document.getElementById("btnGuardar").textContent = "Actualizar";
+    document.getElementById("personaId").value = id;
+    document.getElementById("nombre").value = persona.nombre || "";
+    document.getElementById("dni").value = persona.dni || "";
+    document.getElementById("fechaNacimiento").value = persona.fechaNacimiento || "";
+    document.getElementById("genero").value = persona.genero || "";
+    document.getElementById("telefono").value = persona.telefono || "";
+    document.getElementById("email").value = persona.email || "";
+    document.getElementById("direccion").value = persona.direccion || "";
+    document.getElementById("tutor").value = persona.tutor || "";
+    document.getElementById("curso").value = persona.curso || "";
+    document.getElementById("estado").value = persona.estado || "Activo";
+    document.getElementById("observaciones").value = persona.observaciones || "";
+  } else {
+    personaEditandoId = null;
+    document.getElementById("modalPersonaTitulo").textContent = "Agregar Persona";
+    document.getElementById("btnGuardar").textContent = "Guardar";
+  }
+
+  modal.classList.add("show");
 }
 
-function filtrarPersonas() {
-  const query = document.getElementById("buscarPersona").value.toLowerCase().trim();
-  const filtradas = personas.filter(
-    (p) =>
-      p.nombre.toLowerCase().includes(query) ||
-      p.dni.toLowerCase().includes(query) ||
-      (p.curso && p.curso.toLowerCase().includes(query))
-  );
-  renderizarTabla(filtradas);
+function cerrarModalPersona() {
+  document.getElementById("modalPersona").classList.remove("show");
+  reiniciarFormulario();
+}
+
+// Redirigir editarPersona al modal
+function editarPersona(id) {
+  abrirModalPersona(id);
 }
 
 // ===== FORMULARIO =====
@@ -301,8 +556,6 @@ function reiniciarFormulario() {
   document.getElementById("formPersona").reset();
   document.getElementById("personaId").value = "";
   personaEditandoId = null;
-  document.getElementById("tituloFormulario").textContent = "Registrar Persona";
-  document.getElementById("btnGuardar").textContent = "Guardar";
 }
 
 function guardarPersona(event) {
@@ -324,74 +577,30 @@ function guardarPersona(event) {
   };
 
   if (personaEditandoId) {
-    // EDITAR
     datos.updatedAt = new Date().toISOString();
     if (db) {
       db.collection("personas").doc(personaEditandoId).update(datos)
-        .then(() => {
-          mostrarToast("Persona actualizada correctamente.", "success");
-          navegarA("/personas");
-        })
-        .catch((err) => {
-          console.error(err);
-          mostrarToast("Error al actualizar.", "error");
-        });
+        .then(() => { mostrarToast("Persona actualizada.", "success"); cerrarModalPersona(); })
+        .catch((err) => { console.error(err); mostrarToast("Error al actualizar.", "error"); });
     } else {
-      // Local
       const idx = personas.findIndex((p) => p.id === personaEditandoId);
-      if (idx !== -1) {
-        personas[idx] = { ...personas[idx], ...datos };
-        guardarDatosLocales();
-        mostrarToast("Persona actualizada correctamente.", "success");
-        navegarA("/personas");
-      }
+      if (idx !== -1) { personas[idx] = { ...personas[idx], ...datos }; guardarDatosLocales(); }
+      mostrarToast("Persona actualizada.", "success"); cerrarModalPersona();
     }
   } else {
-    // CREAR
     datos.createdAt = new Date().toISOString();
     if (db) {
       db.collection("personas").add(datos)
-        .then(() => {
-          mostrarToast("Persona registrada correctamente.", "success");
-          navegarA("/personas");
-        })
-        .catch((err) => {
-          console.error(err);
-          mostrarToast("Error al registrar.", "error");
-        });
+        .then(() => { mostrarToast("Persona registrada.", "success"); cerrarModalPersona(); })
+        .catch((err) => { console.error(err); mostrarToast("Error al registrar.", "error"); });
     } else {
-      // Local
       datos.id = "local_" + Date.now();
       personas.push(datos);
       guardarDatosLocales();
-      mostrarToast("Persona registrada correctamente.", "success");
-      navegarA("/personas");
+      renderizarInicio();
+      mostrarToast("Persona registrada.", "success"); cerrarModalPersona();
     }
   }
-}
-
-function editarPersona(id) {
-  const persona = personas.find((p) => p.id === id);
-  if (!persona) return;
-
-  personaEditandoId = id;
-  document.getElementById("tituloFormulario").textContent = "Editar Persona";
-  document.getElementById("btnGuardar").textContent = "Actualizar";
-
-  document.getElementById("personaId").value = id;
-  document.getElementById("nombre").value = persona.nombre || "";
-  document.getElementById("dni").value = persona.dni || "";
-  document.getElementById("fechaNacimiento").value = persona.fechaNacimiento || "";
-  document.getElementById("genero").value = persona.genero || "";
-  document.getElementById("telefono").value = persona.telefono || "";
-  document.getElementById("email").value = persona.email || "";
-  document.getElementById("direccion").value = persona.direccion || "";
-  document.getElementById("tutor").value = persona.tutor || "";
-  document.getElementById("curso").value = persona.curso || "";
-  document.getElementById("estado").value = persona.estado || "Activo";
-  document.getElementById("observaciones").value = persona.observaciones || "";
-
-  navegarA("/registrar");
 }
 
 // ===== ELIMINAR =====
@@ -418,18 +627,13 @@ function confirmarEliminar(id) {
 function eliminarPersona(id) {
   if (db) {
     db.collection("personas").doc(id).delete()
-      .then(() => {
-        mostrarToast("Persona eliminada.", "success");
-      })
-      .catch((err) => {
-        console.error(err);
-        mostrarToast("Error al eliminar.", "error");
-      });
+      .then(() => { mostrarToast("Persona eliminada.", "success"); PersonasTabla.render(); renderizarInicio(); })
+      .catch((err) => { console.error(err); mostrarToast("Error al eliminar.", "error"); });
   } else {
     personas = personas.filter((p) => p.id !== id);
     guardarDatosLocales();
-    renderizarTabla(personas);
     renderizarInicio();
+    PersonasTabla.render();
     mostrarToast("Persona eliminada.", "success");
   }
 }
