@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Desertores CEBAS</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h2 class="sidebar-title">CEBAS</h2>
+      <p class="sidebar-subtitle">Registro de Estudiantes</p>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="#/" class="nav-link active" data-page="inicio">
+        <span class="nav-icon">&#9751;</span>
+        Inicio
+      </a>
+      <a href="#/personas" class="nav-link" data-page="personas">
+        <span class="nav-icon">&#9775;</span>
+        Personas
+      </a>
+      <a href="#/registrar" class="nav-link" data-page="registrar">
+        <span class="nav-icon">&#10010;</span>
+        Registrar
+      </a>
+      <a href="#/reportes" class="nav-link" data-page="reportes">
+        <span class="nav-icon">&#9776;</span>
+        Reportes
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <small>&copy; 2026 CEBAS</small>
+    </div>
+  </aside>
+
+  <!-- Botón hamburguesa (mobile) -->
+  <button class="menu-toggle" id="menuToggle" aria-label="Menú">&#9776;</button>
+
+  <!-- Overlay mobile -->
+  <div class="overlay" id="overlay"></div>
+
+  <!-- Contenido principal -->
+  <main class="main-content" id="mainContent">
+
+    <!-- Página: Inicio -->
+    <section class="page active" id="page-inicio">
+      <h1>Bienvenido</h1>
+      <p>Sistema de registro y seguimiento de estudiantes del CEBAS.</p>
+      <div class="cards-grid">
+        <div class="card">
+          <h3>Total Personas</h3>
+          <p class="card-number" id="statTotal">0</p>
+        </div>
+        <div class="card">
+          <h3>Activos</h3>
+          <p class="card-number" id="statActivos">0</p>
+        </div>
+        <div class="card">
+          <h3>Inactivos</h3>
+          <p class="card-number" id="statInactivos">0</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Página: Personas (listado) -->
+    <section class="page" id="page-personas">
+      <div class="page-header">
+        <h1>Personas</h1>
+        <button class="btn btn-primary" onclick="navegarA('/registrar')">+ Nueva Persona</button>
+      </div>
+      <div class="search-bar">
+        <input type="text" id="buscarPersona" placeholder="Buscar por nombre, DNI..." oninput="filtrarPersonas()">
+      </div>
+      <div class="table-container">
+        <table id="tablaPersonas">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>DNI</th>
+              <th>Edad</th>
+              <th>Curso</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyPersonas">
+            <!-- Se llena dinámicamente -->
+          </tbody>
+        </table>
+        <p id="sinResultados" class="empty-msg" style="display:none;">No se encontraron personas.</p>
+      </div>
+    </section>
+
+    <!-- Página: Registrar persona -->
+    <section class="page" id="page-registrar">
+      <h1 id="tituloFormulario">Registrar Persona</h1>
+      <form id="formPersona" class="form-persona" onsubmit="guardarPersona(event)">
+        <input type="hidden" id="personaId" value="">
+
+        <div class="form-group">
+          <label for="nombre">Nombre completo *</label>
+          <input type="text" id="nombre" required placeholder="Ej: Juan Pérez">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="dni">DNI *</label>
+            <input type="text" id="dni" required placeholder="Ej: 12345678">
+          </div>
+          <div class="form-group">
+            <label for="fechaNacimiento">Fecha de nacimiento *</label>
+            <input type="date" id="fechaNacimiento" required>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="genero">Género</label>
+            <select id="genero">
+              <option value="">Seleccionar...</option>
+              <option value="Masculino">Masculino</option>
+              <option value="Femenino">Femenino</option>
+              <option value="Otro">Otro</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="telefono">Teléfono</label>
+            <input type="tel" id="telefono" placeholder="Ej: 3815551234">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" placeholder="Ej: juan@email.com">
+        </div>
+
+        <div class="form-group">
+          <label for="direccion">Dirección</label>
+          <input type="text" id="direccion" placeholder="Ej: Av. Sáenz Peña 123">
+        </div>
+
+        <div class="form-group">
+          <label for="tutor">Nombre del tutor / apoderado</label>
+          <input type="text" id="tutor" placeholder="Ej: María Pérez">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="curso">Curso / División</label>
+            <input type="text" id="curso" placeholder="Ej: 3ro A">
+          </div>
+          <div class="form-group">
+            <label for="estado">Estado</label>
+            <select id="estado">
+              <option value="Activo">Activo</option>
+              <option value="Inactivo">Inactivo</option>
+              <option value="Egresado">Egresado</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="observaciones">Observaciones</label>
+          <textarea id="observaciones" rows="3" placeholder="Notas adicionales..."></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" id="btnGuardar">Guardar</button>
+          <button type="button" class="btn btn-secondary" onclick="navegarA('/personas')">Cancelar</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Página: Reportes -->
+    <section class="page" id="page-reportes">
+      <h1>Reportes</h1>
+      <p>Próximamente reportes y estadísticas.</p>
+    </section>
+
+  </main>
+
+  <!-- Modal de confirmación -->
+  <div class="modal" id="modalConfirmar">
+    <div class="modal-content">
+      <p id="modalMensaje">¿Estás seguro?</p>
+      <div class="modal-actions">
+        <button class="btn btn-danger" id="modalBtnConfirmar">Eliminar</button>
+        <button class="btn btn-secondary" id="modalBtnCancelar">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast de notificación -->
+  <div class="toast" id="toast"></div>
+
+  <script src="assets/app.js"></script>
+</body>
+</html>
