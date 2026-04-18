@@ -13,11 +13,12 @@ const firebaseConfig = {
 };
 
 // ===== VARIABLES GLOBALES =====
-let db = null;             // Referencia a Firestore
-let auth = null;           // Referencia a Firebase Auth
-let usuarioActual = null;  // Usuario logueado
-let personas = [];         // Array local de personas (cache)
+let db = null;
+let auth = null;
+let usuarioActual = null;
+let personas = [];
 let personaEditandoId = null;
+let verPersonaIdActual = null;
 
 // ===== INICIALIZACIÓN =====
 document.addEventListener("DOMContentLoaded", () => {
@@ -77,16 +78,6 @@ function cargarPerfilUsuario(user) {
   document.getElementById("userAvatar").textContent = iniciales;
 }
 
-function mostrarTabAuth(tab) {
-  document.getElementById("tabLogin").classList.toggle("active", tab === "login");
-  document.getElementById("tabRegistro").classList.toggle("active", tab === "registro");
-  document.getElementById("formLogin").style.display = tab === "login" ? "block" : "none";
-  document.getElementById("formRegistro").style.display = tab === "registro" ? "block" : "none";
-  // Limpiar errores
-  document.getElementById("loginError").style.display = "none";
-  document.getElementById("registroError").style.display = "none";
-}
-
 function mostrarAuthError(elementId, mensaje) {
   const el = document.getElementById(elementId);
   el.textContent = mensaje;
@@ -103,33 +94,6 @@ function loginUsuario(event) {
     .catch((err) => {
       const msg = traducirErrorAuth(err.code);
       mostrarAuthError("loginError", msg);
-    });
-}
-
-function registrarUsuario(event) {
-  event.preventDefault();
-  const nombre = document.getElementById("regNombre").value.trim();
-  const email = document.getElementById("regEmail").value.trim();
-  const password = document.getElementById("regPassword").value;
-  const passwordConfirm = document.getElementById("regPasswordConfirm").value;
-  document.getElementById("registroError").style.display = "none";
-
-  if (password !== passwordConfirm) {
-    mostrarAuthError("registroError", "Las contraseñas no coinciden.");
-    return;
-  }
-
-  auth.createUserWithEmailAndPassword(email, password)
-    .then((cred) => {
-      // Actualizar el displayName del usuario
-      return cred.user.updateProfile({ displayName: nombre });
-    })
-    .then(() => {
-      mostrarToast("Cuenta creada correctamente.", "success");
-    })
-    .catch((err) => {
-      const msg = traducirErrorAuth(err.code);
-      mostrarAuthError("registroError", msg);
     });
 }
 
@@ -153,6 +117,7 @@ function traducirErrorAuth(codigo) {
   return traducciones[codigo] || "Error de autenticación. Intentá de nuevo.";
 }
 
+// ===== ESCUCHAR PERSONAS (Firestore realtime) =====
 function escucharPersonas() {
   if (!db) return;
   db.collection("personas")
@@ -163,7 +128,6 @@ function escucharPersonas() {
           id: doc.id,
           ...doc.data()
         }));
-        PersonasTabla.actualizarFiltroCursos();
         const paginaActual = obtenerPaginaActual();
         if (paginaActual === "personas") {
           PersonasTabla.render();
@@ -189,23 +153,20 @@ function guardarDatosLocales() {
 // ===== ROUTER SPA =====
 function iniciarRouter() {
   window.addEventListener("hashchange", manejarRuta);
-  manejarRuta(); // Renderizar ruta inicial
+  manejarRuta();
 }
 
 function manejarRuta() {
   const hash = window.location.hash || "#/";
   const pagina = obtenerPaginaActual();
 
-  // Ocultar todas las páginas
   document.querySelectorAll(".page").forEach((p) => p.classList.remove("active"));
 
-  // Mostrar la página correspondiente
   const pageEl = document.getElementById(`page-${pagina}`);
   if (pageEl) {
     pageEl.classList.add("active");
   }
 
-  // Actualizar nav activo
   document.querySelectorAll(".nav-link").forEach((link) => {
     link.classList.remove("active");
     if (link.getAttribute("data-page") === pagina) {
@@ -213,12 +174,10 @@ function manejarRuta() {
     }
   });
 
-  // Acciones por página
   if (pagina === "personas") {
     PersonasTabla.render();
   }
 
-  // Cerrar menú mobile
   cerrarMenuMobile();
 }
 
@@ -231,7 +190,7 @@ function navegarA(ruta) {
   window.location.hash = ruta;
 }
 
-// ===== PERSONAS TABLA (con paginación, filtros, sort, bulk) =====
+// ===== PERSONAS TABLA (paginación, filtros, sort, bulk) =====
 const PersonasTabla = {
   ITEMS_POR_PAGINA: 10,
   _page: 1,
@@ -244,36 +203,21 @@ const PersonasTabla = {
   _getDatosFiltrados() {
     const query = (document.getElementById("buscarPersona").value || "").toLowerCase().trim();
     const fEstado = document.getElementById("filtroEstado").value;
-    const fGenero = document.getElementById("filtroGenero").value;
-    const fCurso = document.getElementById("filtroCurso").value;
 
     let datos = personas.filter((p) => {
       const matchQuery = !query ||
         (p.nombre || "").toLowerCase().includes(query) ||
-        (p.dni || "").toLowerCase().includes(query) ||
-        (p.curso || "").toLowerCase().includes(query);
+        (p.dni || "").toLowerCase().includes(query);
       const matchEstado = !fEstado || p.estado === fEstado;
-      const matchGenero = !fGenero || p.genero === fGenero;
-      const matchCurso = !fCurso || p.curso === fCurso;
-      return matchQuery && matchEstado && matchGenero && matchCurso;
+      return matchQuery && matchEstado;
     });
 
     // Ordenar
     const campo = this._sortField;
     const dir = this._sortDir === "asc" ? 1 : -1;
     datos.sort((a, b) => {
-      let valA, valB;
-      if (campo === "edad") {
-        valA = calcularEdad(a.fechaNacimiento);
-        valB = calcularEdad(b.fechaNacimiento);
-        if (valA === "-" && valB === "-") return 0;
-        if (valA === "-") return 1;
-        if (valB === "-") return -1;
-        return (valA - valB) * dir;
-      } else {
-        valA = (a[campo] || "").toString().toLowerCase();
-        valB = (b[campo] || "").toString().toLowerCase();
-      }
+      const valA = (a[campo] || "").toString().toLowerCase();
+      const valB = (b[campo] || "").toString().toLowerCase();
       return valA.localeCompare(valB, "es") * dir;
     });
 
@@ -334,7 +278,6 @@ const PersonasTabla = {
     html += `<button ${this._page <= 1 ? "disabled" : ""} onclick="PersonasTabla._page=1;PersonasTabla.render()">&laquo;</button>`;
     html += `<button ${this._page <= 1 ? "disabled" : ""} onclick="PersonasTabla._page--;PersonasTabla.render()">&lsaquo;</button>`;
 
-    // Rango de páginas
     let startPage = Math.max(1, this._page - 2);
     let endPage = Math.min(totalPages, this._page + 2);
     if (startPage > 1) {
@@ -393,15 +336,6 @@ const PersonasTabla = {
     this._page = 1;
     this._seleccionados.clear();
     this.render();
-  },
-
-  actualizarFiltroCursos() {
-    const select = document.getElementById("filtroCurso");
-    const current = select.value;
-    const cursos = [...new Set(personas.map(p => p.curso).filter(Boolean))].sort((a, b) => a.localeCompare(b, "es"));
-    select.innerHTML = '<option value="">Todos los cursos</option>' +
-      cursos.map(c => `<option value="${escaparHTML(c)}">${escaparHTML(c)}</option>`).join("");
-    select.value = current;
   },
 
   // --- Selección múltiple ---
@@ -483,7 +417,95 @@ const PersonasTabla = {
   }
 };
 
-// ===== MODAL VER PERSONA (detalle) =====\nlet verPersonaIdActual = null;\n\nfunction verPersona(id) {\n  const persona = personas.find((p) => p.id === id);\n  if (!persona) return;\n  verPersonaIdActual = id;\n\n  document.getElementById(\"verPersonaNombre\").textContent = persona.nombre;\n\n  const edad = calcularEdad(persona.fechaNacimiento);\n  const badgeClass = persona.estado === \"Activo\" ? \"badge-activo\"\n                   : persona.estado === \"Inactivo\" ? \"badge-inactivo\"\n                   : \"badge-egresado\";\n\n  document.getElementById(\"verPersonaBody\").innerHTML = `\n    <div class=\"detail-grid\">\n      <div class=\"detail-item\">\n        <div class=\"detail-label\">DNI</div>\n        <div class=\"detail-value\">${escaparHTML(persona.dni || \"-\")}</div>\n      </div>\n      <div class=\"detail-item\">\n        <div class=\"detail-label\">Edad</div>\n        <div class=\"detail-value\">${edad}</div>\n      </div>\n      <div class=\"detail-item\">\n        <div class=\"detail-label\">Fecha de nacimiento</div>\n        <div class=\"detail-value\">${persona.fechaNacimiento ? formatearFecha(persona.fechaNacimiento) : \"-\"}</div>\n      </div>\n      <div class=\"detail-item\">\n        <div class=\"detail-label\">Género</div>\n        <div class=\"detail-value\">${escaparHTML(persona.genero || \"-\")}</div>\n      </div>\n      <div class=\"detail-item\">\n        <div class=\"detail-label\">Teléfono</div>\n        <div class=\"detail-value\">${escaparHTML(persona.telefono || \"-\")}</div>\n      </div>\n      <div class=\"detail-item\">\n        <div class=\"detail-label\">Email</div>\n        <div class=\"detail-value\">${escaparHTML(persona.email || \"-\")}</div>\n      </div>\n      <div class=\"detail-item full-width\">\n        <div class=\"detail-label\">Dirección</div>\n        <div class=\"detail-value\">${escaparHTML(persona.direccion || \"-\")}</div>\n      </div>\n      <div class=\"detail-item full-width\">\n        <div class=\"detail-label\">Tutor / Apoderado</div>\n        <div class=\"detail-value\">${escaparHTML(persona.tutor || \"-\")}</div>\n      </div>\n      <div class=\"detail-item\">\n        <div class=\"detail-label\">Curso / División</div>\n        <div class=\"detail-value\">${escaparHTML(persona.curso || \"-\")}</div>\n      </div>\n      <div class=\"detail-item\">\n        <div class=\"detail-label\">Estado</div>\n        <div class=\"detail-value\"><span class=\"badge ${badgeClass}\">${escaparHTML(persona.estado || \"Activo\")}</span></div>\n      </div>\n      <div class=\"detail-item full-width\">\n        <div class=\"detail-label\">Observaciones</div>\n        <div class=\"detail-value\">${escaparHTML(persona.observaciones || \"-\")}</div>\n      </div>\n    </div>\n  `;\n\n  document.getElementById(\"modalVerPersona\").classList.add(\"show\");\n}\n\nfunction cerrarModalVerPersona() {\n  document.getElementById(\"modalVerPersona\").classList.remove(\"show\");\n  verPersonaIdActual = null;\n}\n\nfunction editarDesdeVista() {\n  const id = verPersonaIdActual;\n  cerrarModalVerPersona();\n setTimeout(() => abrirModalPersona(id), 200);\n}\n\nfunction eliminarDesdeVista() {\n  const id = verPersonaIdActual;\n  cerrarModalVerPersona();\n setTimeout(() => confirmarEliminar(id), 200);\n}\n\n// ===== MODAL PERSONA (agregar/editar) =====
+// ===== MODAL VER PERSONA (detalle) =====
+function verPersona(id) {
+  const persona = personas.find((p) => p.id === id);
+  if (!persona) return;
+  verPersonaIdActual = id;
+
+  document.getElementById("verPersonaNombre").textContent = persona.nombre;
+
+  const badgeClass = persona.estado === "Activo" ? "badge-activo" : "badge-desertor";
+
+  // Lista de documentos con estado
+  const documentos = [
+    { key: "fichaIngreso", label: "Ficha de Ingreso" },
+    { key: "fotocopiaDni", label: "Fotocopia del DNI" },
+    { key: "fotocopiaPartida", label: "Fotocopia de la partida de nacimiento" },
+    { key: "certificadoPrimaria", label: "Certificado de Primaria" },
+    { key: "analiticoSecundario", label: "Analítico de secundario incompleto" }
+  ];
+
+  const docsHTML = documentos.map(d => {
+    const tiene = !!persona[d.key];
+    return `
+      <div class="doc-item ${tiene ? 'doc-ok' : 'doc-pending'}">
+        <span class="doc-icon">${tiene ? '&#10003;' : '&#10007;'}</span>
+        <span class="doc-label">${d.label}</span>
+      </div>`;
+  }).join("");
+
+  // Log de actividad
+  const log = persona.log || [];
+  let logHTML;
+  if (log.length > 0) {
+    logHTML = log.slice().reverse().map(l => `
+      <div class="log-entry">
+        <span class="log-date">${formatearFechaHora(l.fecha)}</span>
+        <span class="log-action">${escaparHTML(l.accion)}</span>
+      </div>`).join("");
+  } else {
+    logHTML = '<p class="log-empty">Sin registros de cambios.</p>';
+  }
+
+  document.getElementById("verPersonaBody").innerHTML = `
+    <div class="detail-grid">
+      <div class="detail-item full-width">
+        <div class="detail-label">DNI</div>
+        <div class="detail-value">${escaparHTML(persona.dni || "-")}</div>
+      </div>
+    </div>
+    <div class="form-separator"></div>
+    <div class="detail-label" style="margin-bottom:8px;">Documentación</div>
+    <div class="documentos-list">${docsHTML}</div>
+    <div class="form-separator"></div>
+    <div class="detail-grid">
+      <div class="detail-item full-width">
+        <div class="detail-label">Estado</div>
+        <div class="detail-value"><span class="badge ${badgeClass}">${escaparHTML(persona.estado || "Desertor/a")}</span></div>
+      </div>
+      <div class="detail-item full-width">
+        <div class="detail-label">Observaciones</div>
+        <div class="detail-value">${escaparHTML(persona.observaciones || "Sin observaciones.")}</div>
+      </div>
+    </div>
+    <div class="activity-log">
+      <div class="log-title">Historial</div>
+      ${logHTML}
+    </div>
+  `;
+
+  document.getElementById("modalVerPersona").classList.add("show");
+}
+
+function cerrarModalVerPersona() {
+  document.getElementById("modalVerPersona").classList.remove("show");
+  verPersonaIdActual = null;
+}
+
+function editarDesdeVista() {
+  const id = verPersonaIdActual;
+  cerrarModalVerPersona();
+  setTimeout(() => abrirModalPersona(id), 200);
+}
+
+function eliminarDesdeVista() {
+  const id = verPersonaIdActual;
+  cerrarModalVerPersona();
+  setTimeout(() => confirmarEliminar(id), 200);
+}
+
+// ===== MODAL PERSONA (agregar/editar) =====
 function abrirModalPersona(id) {
   const modal = document.getElementById("modalPersona");
   reiniciarFormulario();
@@ -497,14 +519,12 @@ function abrirModalPersona(id) {
     document.getElementById("personaId").value = id;
     document.getElementById("nombre").value = persona.nombre || "";
     document.getElementById("dni").value = persona.dni || "";
-    document.getElementById("fechaNacimiento").value = persona.fechaNacimiento || "";
-    document.getElementById("genero").value = persona.genero || "";
-    document.getElementById("telefono").value = persona.telefono || "";
-    document.getElementById("email").value = persona.email || "";
-    document.getElementById("direccion").value = persona.direccion || "";
-    document.getElementById("tutor").value = persona.tutor || "";
-    document.getElementById("curso").value = persona.curso || "";
-    document.getElementById("estado").value = persona.estado || "Activo";
+    document.getElementById("fichaIngreso").checked = !!persona.fichaIngreso;
+    document.getElementById("fotocopiaDni").checked = !!persona.fotocopiaDni;
+    document.getElementById("fotocopiaPartida").checked = !!persona.fotocopiaPartida;
+    document.getElementById("certificadoPrimaria").checked = !!persona.certificadoPrimaria;
+    document.getElementById("analiticoSecundario").checked = !!persona.analiticoSecundario;
+    document.getElementById("estado").value = persona.estado || "Desertor/a";
     document.getElementById("observaciones").value = persona.observaciones || "";
   } else {
     personaEditandoId = null;
@@ -520,7 +540,6 @@ function cerrarModalPersona() {
   reiniciarFormulario();
 }
 
-// Redirigir editarPersona al modal
 function editarPersona(id) {
   abrirModalPersona(id);
 }
@@ -529,6 +548,7 @@ function editarPersona(id) {
 function reiniciarFormulario() {
   document.getElementById("formPersona").reset();
   document.getElementById("personaId").value = "";
+  document.getElementById("estado").value = "Desertor/a";
   personaEditandoId = null;
 }
 
@@ -538,20 +558,31 @@ function guardarPersona(event) {
   const datos = {
     nombre: document.getElementById("nombre").value.trim(),
     dni: document.getElementById("dni").value.trim(),
-    fechaNacimiento: document.getElementById("fechaNacimiento").value,
-    genero: document.getElementById("genero").value,
-    telefono: document.getElementById("telefono").value.trim(),
-    email: document.getElementById("email").value.trim(),
-    direccion: document.getElementById("direccion").value.trim(),
-    tutor: document.getElementById("tutor").value.trim(),
-    curso: document.getElementById("curso").value.trim(),
+    fichaIngreso: document.getElementById("fichaIngreso").checked,
+    fotocopiaDni: document.getElementById("fotocopiaDni").checked,
+    fotocopiaPartida: document.getElementById("fotocopiaPartida").checked,
+    certificadoPrimaria: document.getElementById("certificadoPrimaria").checked,
+    analiticoSecundario: document.getElementById("analiticoSecundario").checked,
     estado: document.getElementById("estado").value,
-    observaciones: document.getElementById("observaciones").value.trim(),
-    updatedAt: new Date().toISOString()
+    observaciones: document.getElementById("observaciones").value.trim()
   };
 
   if (personaEditandoId) {
+    // Modo edición: generar log de cambios
+    const personaActual = personas.find(p => p.id === personaEditandoId);
+    const logEntry = generarLogCambios(personaActual, datos);
+
     datos.updatedAt = new Date().toISOString();
+
+    // Agregar al log existente
+    if (logEntry) {
+      const logArray = personaActual && personaActual.log ? [...personaActual.log] : [];
+      logArray.push({ fecha: new Date().toISOString(), accion: logEntry });
+      datos.log = logArray;
+    } else {
+      datos.log = personaActual ? personaActual.log : [];
+    }
+
     if (db) {
       db.collection("personas").doc(personaEditandoId).update(datos)
         .then(() => { mostrarToast("Persona actualizada.", "success"); cerrarModalPersona(); })
@@ -562,7 +593,10 @@ function guardarPersona(event) {
       mostrarToast("Persona actualizada.", "success"); cerrarModalPersona();
     }
   } else {
+    // Modo creación
     datos.createdAt = new Date().toISOString();
+    datos.log = [{ fecha: datos.createdAt, accion: "Persona creada" }];
+
     if (db) {
       db.collection("personas").add(datos)
         .then(() => { mostrarToast("Persona registrada.", "success"); cerrarModalPersona(); })
@@ -574,6 +608,42 @@ function guardarPersona(event) {
       mostrarToast("Persona registrada.", "success"); cerrarModalPersona();
     }
   }
+}
+
+// ===== LOG DE CAMBIOS =====
+function generarLogCambios(viejo, nuevo) {
+  if (!viejo) return "Persona creada";
+
+  const campos = {
+    nombre: "Nombre",
+    dni: "DNI",
+    fichaIngreso: "Ficha de Ingreso",
+    fotocopiaDni: "Fotocopia del DNI",
+    fotocopiaPartida: "Partida de nacimiento",
+    certificadoPrimaria: "Certificado de Primaria",
+    analiticoSecundario: "Analítico secundario",
+    estado: "Estado",
+    observaciones: "Observaciones"
+  };
+
+  const cambios = [];
+  for (const [key, label] of Object.entries(campos)) {
+    const valViejo = viejo[key];
+    const valNuevo = nuevo[key];
+
+    if (JSON.stringify(valViejo) !== JSON.stringify(valNuevo)) {
+      if (typeof valNuevo === "boolean") {
+        cambios.push(`${label}: ${valNuevo ? "Presente" : "Pendiente"}`);
+      } else {
+        const vStr = (valViejo !== undefined && valViejo !== "") ? String(valViejo) : "(vacío)";
+        const nStr = (valNuevo !== undefined && valNuevo !== "") ? String(valNuevo) : "(vacío)";
+        cambios.push(`${label}: ${vStr} → ${nStr}`);
+      }
+    }
+  }
+
+  if (cambios.length === 0) return null;
+  return "Modificado: " + cambios.join(", ");
 }
 
 // ===== ELIMINAR =====
@@ -641,18 +711,6 @@ function mostrarToast(mensaje, tipo) {
 }
 
 // ===== UTILIDADES =====
-function calcularEdad(fechaNacimiento) {
-  if (!fechaNacimiento) return "-";
-  const hoy = new Date();
-  const nacimiento = new Date(fechaNacimiento + "T00:00:00");
-  let edad = hoy.getFullYear() - nacimiento.getFullYear();
-  const m = hoy.getMonth() - nacimiento.getMonth();
-  if (m < 0 || (m === 0 && hoy.getDate() < nacimiento.getDate())) {
-    edad--;
-  }
-  return edad;
-}
-
 function escaparHTML(texto) {
   if (!texto) return "";
   const div = document.createElement("div");
@@ -664,4 +722,15 @@ function formatearFecha(fechaStr) {
   if (!fechaStr) return "-";
   const [year, month, day] = fechaStr.split("-");
   return `${day}/${month}/${year}`;
+}
+
+function formatearFechaHora(fechaStr) {
+  if (!fechaStr) return "-";
+  const fecha = new Date(fechaStr);
+  const dia = String(fecha.getDate()).padStart(2, "0");
+  const mes = String(fecha.getMonth() + 1).padStart(2, "0");
+  const anio = fecha.getFullYear();
+  const hora = String(fecha.getHours()).padStart(2, "0");
+  const min = String(fecha.getMinutes()).padStart(2, "0");
+  return `${dia}/${mes}/${anio} ${hora}:${min}`;
 }
