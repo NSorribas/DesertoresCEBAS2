@@ -137,7 +137,6 @@ a {
   flex-shrink: 0;
   border-radius: 12px;
   object-fit: contain;
-  box-shadow: 0 0 16px rgba(49, 164, 238, 0.25);
 }
 
 .sidebar-text {
@@ -1070,7 +1069,6 @@ tr[data-id]:hover {
   height: 64px;
   border-radius: 16px;
   object-fit: contain;
-  box-shadow: 0 4px 20px rgba(49, 164, 238, 0.3);
 }
 
 .auth-header {
