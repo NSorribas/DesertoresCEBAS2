@@ -14,6 +14,8 @@ const firebaseConfig = {
 
 // ===== VARIABLES GLOBALES =====
 let db = null;             // Referencia a Firestore
+let auth = null;           // Referencia a Firebase Auth
+let usuarioActual = null;  // Usuario logueado
 let personas = [];         // Array local de personas (cache)
 let personaEditandoId = null;
 
@@ -29,13 +31,127 @@ function iniciarFirebase() {
   if (typeof firebase !== "undefined" && firebaseConfig.apiKey) {
     firebase.initializeApp(firebaseConfig);
     db = firebase.firestore();
-    escucharPersonas();
+    auth = firebase.auth();
+    escucharAuth();
     console.log("Firebase conectado.");
   } else {
     console.warn("Firebase no configurado. Usando datos locales (localStorage).");
     cargarDatosLocales();
+    mostrarApp();
     renderizarInicio();
   }
+}
+
+// ===== AUTH =====
+function escucharAuth() {
+  auth.onAuthStateChanged((user) => {
+    if (user) {
+      usuarioActual = user;
+      cargarPerfilUsuario(user);
+      mostrarApp();
+      escucharPersonas();
+      manejarRuta();
+    } else {
+      usuarioActual = null;
+      mostrarLogin();
+      if (db) personas = [];
+    }
+  });
+}
+
+function mostrarLogin() {
+  document.getElementById("authScreen").style.display = "flex";
+  document.getElementById("appWrapper").style.display = "none";
+  document.getElementById("menuToggle").style.display = "none";
+}
+
+function mostrarApp() {
+  document.getElementById("authScreen").style.display = "none";
+  document.getElementById("appWrapper").style.display = "flex";
+  document.getElementById("menuToggle").style.display = "";
+}
+
+function cargarPerfilUsuario(user) {
+  const displayName = user.displayName || user.email.split("@")[0];
+  const iniciales = displayName.split(" ").map(n => n[0]).join("").toUpperCase().substring(0, 2);
+  document.getElementById("userName").textContent = displayName;
+  document.getElementById("userAvatar").textContent = iniciales;
+}
+
+function mostrarTabAuth(tab) {
+  document.getElementById("tabLogin").classList.toggle("active", tab === "login");
+  document.getElementById("tabRegistro").classList.toggle("active", tab === "registro");
+  document.getElementById("formLogin").style.display = tab === "login" ? "block" : "none";
+  document.getElementById("formRegistro").style.display = tab === "registro" ? "block" : "none";
+  // Limpiar errores
+  document.getElementById("loginError").style.display = "none";
+  document.getElementById("registroError").style.display = "none";
+}
+
+function mostrarAuthError(elementId, mensaje) {
+  const el = document.getElementById(elementId);
+  el.textContent = mensaje;
+  el.style.display = "block";
+}
+
+function loginUsuario(event) {
+  event.preventDefault();
+  const email = document.getElementById("loginEmail").value.trim();
+  const password = document.getElementById("loginPassword").value;
+  document.getElementById("loginError").style.display = "none";
+
+  auth.signInWithEmailAndPassword(email, password)
+    .catch((err) => {
+      const msg = traducirErrorAuth(err.code);
+      mostrarAuthError("loginError", msg);
+    });
+}
+
+function registrarUsuario(event) {
+  event.preventDefault();
+  const nombre = document.getElementById("regNombre").value.trim();
+  const email = document.getElementById("regEmail").value.trim();
+  const password = document.getElementById("regPassword").value;
+  const passwordConfirm = document.getElementById("regPasswordConfirm").value;
+  document.getElementById("registroError").style.display = "none";
+
+  if (password !== passwordConfirm) {
+    mostrarAuthError("registroError", "Las contraseñas no coinciden.");
+    return;
+  }
+
+  auth.createUserWithEmailAndPassword(email, password)
+    .then((cred) => {
+      // Actualizar el displayName del usuario
+      return cred.user.updateProfile({ displayName: nombre });
+    })
+    .then(() => {
+      mostrarToast("Cuenta creada correctamente.", "success");
+    })
+    .catch((err) => {
+      const msg = traducirErrorAuth(err.code);
+      mostrarAuthError("registroError", msg);
+    });
+}
+
+function logoutUsuario() {
+  if (auth) {
+    auth.signOut();
+  }
+}
+
+function traducirErrorAuth(codigo) {
+  const traducciones = {
+    "auth/email-already-in-use": "Este email ya está registrado.",
+    "auth/invalid-email": "Email inválido.",
+    "auth/weak-password": "La contraseña es muy débil (mínimo 6 caracteres).",
+    "auth/user-not-found": "No existe una cuenta con ese email.",
+    "auth/wrong-password": "Contraseña incorrecta.",
+    "auth/invalid-credential": "Email o contraseña incorrectos.",
+    "auth/too-many-requests": "Demasiados intentos. Intentá de nuevo más tarde.",
+    "auth/network-request-failed": "Error de conexión. Verificá tu internet."
+  };
+  return traducciones[codigo] || "Error de autenticación. Intentá de nuevo.";
 }
 
 function escucharPersonas() {
@@ -66,6 +182,7 @@ function escucharPersonas() {
 function cargarDatosLocales() {
   const datos = localStorage.getItem("ceb_personas");
   personas = datos ? JSON.parse(datos) : [];
+  renderizarInicio();
 }
 
 function guardarDatosLocales() {

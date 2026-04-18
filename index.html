@@ -8,6 +8,61 @@
 </head>
 <body>
 
+  <!-- Pantalla de Login (se muestra cuando NO hay sesión) -->
+  <div class="auth-screen" id="authScreen">
+    <div class="auth-container">
+      <div class="auth-header">
+        <h1>CEBAS</h1>
+        <p>Registro de Estudiantes</p>
+      </div>
+
+      <!-- Tabs: Login / Registro -->
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tabLogin" onclick="mostrarTabAuth('login')">Iniciar Sesión</button>
+        <button class="auth-tab" id="tabRegistro" onclick="mostrarTabAuth('registro')">Crear Cuenta</button>
+      </div>
+
+      <!-- Formulario Login -->
+      <form id="formLogin" class="auth-form" onsubmit="loginUsuario(event)">
+        <div class="form-group">
+          <label for="loginEmail">Email</label>
+          <input type="email" id="loginEmail" required placeholder="tu@email.com">
+        </div>
+        <div class="form-group">
+          <label for="loginPassword">Contraseña</label>
+          <input type="password" id="loginPassword" required placeholder="Tu contraseña">
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Ingresar</button>
+        <p class="auth-error" id="loginError" style="display:none;"></p>
+      </form>
+
+      <!-- Formulario Registro -->
+      <form id="formRegistro" class="auth-form" style="display:none;" onsubmit="registrarUsuario(event)">
+        <div class="form-group">
+          <label for="regNombre">Nombre completo</label>
+          <input type="text" id="regNombre" required placeholder="Ej: Juan Pérez">
+        </div>
+        <div class="form-group">
+          <label for="regEmail">Email</label>
+          <input type="email" id="regEmail" required placeholder="tu@email.com">
+        </div>
+        <div class="form-group">
+          <label for="regPassword">Contraseña (mín. 6 caracteres)</label>
+          <input type="password" id="regPassword" required minlength="6" placeholder="Mínimo 6 caracteres">
+        </div>
+        <div class="form-group">
+          <label for="regPasswordConfirm">Repetir contraseña</label>
+          <input type="password" id="regPasswordConfirm" required minlength="6" placeholder="Repetí la contraseña">
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Crear Cuenta</button>
+        <p class="auth-error" id="registroError" style="display:none;"></p>
+      </form>
+    </div>
+  </div>
+
+  <!-- App completa (se muestra cuando HAY sesión) -->
+  <div class="app-wrapper" id="appWrapper" style="display:none;">
+
   <!-- Sidebar -->
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
@@ -32,6 +87,11 @@
         Reportes
       </a>
     </nav>
+    <div class="sidebar-user" id="sidebarUser">
+      <span class="user-avatar" id="userAvatar">?</span>
+      <span class="user-name" id="userName">Usuario</span>
+      <button class="btn-logout" onclick="logoutUsuario()" title="Cerrar sesión">&#x2715;</button>
+    </div>
     <div class="sidebar-footer">
       <small>&copy; 2026 CEBAS</small>
     </div>
@@ -45,6 +105,8 @@
 
   <!-- Contenido principal -->
   <main class="main-content" id="mainContent">
+
+  
 
     <!-- Página: Inicio -->
     <section class="page active" id="page-inicio">
@@ -183,6 +245,8 @@
 
   </main>
 
+  </div><!-- fin app-wrapper -->
+
   <!-- Modal de confirmación -->
   <div class="modal" id="modalConfirmar">
     <div class="modal-content">
@@ -199,6 +263,7 @@
 
   <!-- Firebase SDK (compat) -->
   <script src="https://www.gstatic.com/firebasejs/11.9.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.9.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore-compat.js"></script>
 
   <script src="assets/app.js"></script>
