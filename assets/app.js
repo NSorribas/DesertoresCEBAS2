@@ -3,14 +3,13 @@
    ============================================================ */
 
 // ===== CONFIGURACIÓN FIREBASE =====
-// Reemplazar con los datos reales de tu proyecto Firebase
 const firebaseConfig = {
-  apiKey: "",
-  authDomain: "",
-  projectId: "",
-  storageBucket: "",
-  messagingSenderId: "",
-  appId: ""
+  apiKey: "AIzaSyBB0iuqkuy5OyLA9ddlnFq8gBCxDJuMHJ0",
+  authDomain: "desertorescebas2.firebaseapp.com",
+  projectId: "desertorescebas2",
+  storageBucket: "desertorescebas2.firebasestorage.app",
+  messagingSenderId: "20960762483",
+  appId: "1:20960762483:web:ac9d45d37dd5ace6286806"
 };
 
 // ===== VARIABLES GLOBALES =====
