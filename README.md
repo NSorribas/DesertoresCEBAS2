@@ -19,7 +19,7 @@
 
 ## Descripcion
 
-Sistema web para el registro y seguimiento de estudiantes desertores del **CEBAS** (Centro de Educación Básica para Adultos). Permite gestionar datos personales, documentacion presentada, estado de cada estudiante y lleva un historial automatico de todos los cambios realizados.
+Sistema web para el registro y seguimiento de estudiantes desertores del **CEBAS** (Centro Especial de Bachillerato para Adultos en Salud). Permite gestionar datos personales, documentacion presentada, estado de cada estudiante y lleva un historial automatico de todos los cambios realizados.
 
 Construido como una **SPA (Single Page Application)** con HTML, CSS y JavaScript puro — sin frameworks ni dependencias de compilacion — desplegado en **GitHub Pages** con **Firebase** como backend (Auth + Firestore).
 
