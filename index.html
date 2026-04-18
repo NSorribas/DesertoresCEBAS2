@@ -16,12 +16,6 @@
         <p>Registro de Estudiantes</p>
       </div>
 
-      <!-- Tabs: Login / Registro -->
-      <div class="auth-tabs">
-        <button class="auth-tab active" id="tabLogin" onclick="mostrarTabAuth('login')">Iniciar Sesión</button>
-        <button class="auth-tab" id="tabRegistro" onclick="mostrarTabAuth('registro')">Crear Cuenta</button>
-      </div>
-
       <!-- Formulario Login -->
       <form id="formLogin" class="auth-form" onsubmit="loginUsuario(event)">
         <div class="form-group">
@@ -34,28 +28,6 @@
         </div>
         <button type="submit" class="btn btn-primary btn-full">Ingresar</button>
         <p class="auth-error" id="loginError" style="display:none;"></p>
-      </form>
-
-      <!-- Formulario Registro -->
-      <form id="formRegistro" class="auth-form" style="display:none;" onsubmit="registrarUsuario(event)">
-        <div class="form-group">
-          <label for="regNombre">Nombre completo</label>
-          <input type="text" id="regNombre" required placeholder="Ej: Juan Pérez">
-        </div>
-        <div class="form-group">
-          <label for="regEmail">Email</label>
-          <input type="email" id="regEmail" required placeholder="tu@email.com">
-        </div>
-        <div class="form-group">
-          <label for="regPassword">Contraseña (mín. 6 caracteres)</label>
-          <input type="password" id="regPassword" required minlength="6" placeholder="Mínimo 6 caracteres">
-        </div>
-        <div class="form-group">
-          <label for="regPasswordConfirm">Repetir contraseña</label>
-          <input type="password" id="regPasswordConfirm" required minlength="6" placeholder="Repetí la contraseña">
-        </div>
-        <button type="submit" class="btn btn-primary btn-full">Crear Cuenta</button>
-        <p class="auth-error" id="registroError" style="display:none;"></p>
       </form>
     </div>
   </div>
