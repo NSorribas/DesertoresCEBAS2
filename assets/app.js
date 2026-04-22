@@ -25,6 +25,7 @@ document.addEventListener("DOMContentLoaded", () => {
   iniciarFirebase();
   iniciarRouter();
   iniciarMenuMobile();
+  iniciarModalCierre();
 });
 
 // ===== FIREBASE =====
@@ -434,7 +435,7 @@ function verPersona(id) {
   // Lista de documentos con estado
   const documentos = [
     { key: "fichaIngreso", label: "Ficha de Ingreso" },
-    { key: "fichaSalud", label: "Ficha de Salud" },
+    { key: "fichaSalud", label: "Ficha de salud" },
     { key: "fotocopiaDni", label: "Fotocopia del DNI" },
     { key: "fotocopiaPartida", label: "Fotocopia de la partida de nacimiento" },
     { key: "certificadoPrimaria", label: "Certificado de Primaria" },
@@ -628,7 +629,7 @@ function generarLogCambios(viejo, nuevo) {
     nombre: "Nombre",
     dni: "DNI",
     fichaIngreso: "Ficha de Ingreso",
-    fichaSalud: "Ficha de Salud",
+    fichaSalud: "Ficha de salud",
     fotocopiaDni: "Fotocopia del DNI",
     fotocopiaPartida: "Partida de nacimiento",
     certificadoPrimaria: "Certificado de Primaria",
@@ -708,6 +709,38 @@ function iniciarMenuMobile() {
 function cerrarMenuMobile() {
   document.getElementById("sidebar").classList.remove("open");
   document.getElementById("overlay").classList.remove("show");
+}
+
+// ===== CIERRE DE MODALES (ESC + click fuera) =====
+function iniciarModalCierre() {
+  // Cerrar con tecla ESC
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      if (document.getElementById("modalVerPersona").classList.contains("show")) {
+        cerrarModalVerPersona();
+      } else if (document.getElementById("modalPersona").classList.contains("show")) {
+        cerrarModalPersona();
+      } else if (document.getElementById("modalConfirmar").classList.contains("show")) {
+        document.getElementById("modalConfirmar").classList.remove("show");
+      }
+    }
+  });
+
+  // Cerrar al hacer click fuera del contenido del modal
+  const modales = [
+    { id: "modalVerPersona", close: cerrarModalVerPersona },
+    { id: "modalPersona", close: cerrarModalPersona },
+    { id: "modalConfirmar", close: () => document.getElementById("modalConfirmar").classList.remove("show") }
+  ];
+
+  modales.forEach(({ id, close }) => {
+    const modal = document.getElementById(id);
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) {
+        close();
+      }
+    });
+  });
 }
 
 // ===== TOAST =====
