@@ -434,9 +434,11 @@ function verPersona(id) {
   // Lista de documentos con estado
   const documentos = [
     { key: "fichaIngreso", label: "Ficha de Ingreso" },
+    { key: "fichaSalud", label: "Ficha de Salud" },
     { key: "fotocopiaDni", label: "Fotocopia del DNI" },
     { key: "fotocopiaPartida", label: "Fotocopia de la partida de nacimiento" },
     { key: "certificadoPrimaria", label: "Certificado de Primaria" },
+    { key: "certificadoSecundaria", label: "Certificado de Secundaria" },
     { key: "analiticoSecundario", label: "Analítico de secundario incompleto" }
   ];
 
@@ -524,9 +526,11 @@ function abrirModalPersona(id) {
     document.getElementById("nombre").value = persona.nombre || "";
     document.getElementById("dni").value = persona.dni || "";
     document.getElementById("fichaIngreso").checked = !!persona.fichaIngreso;
+    document.getElementById("fichaSalud").checked = !!persona.fichaSalud;
     document.getElementById("fotocopiaDni").checked = !!persona.fotocopiaDni;
     document.getElementById("fotocopiaPartida").checked = !!persona.fotocopiaPartida;
     document.getElementById("certificadoPrimaria").checked = !!persona.certificadoPrimaria;
+    document.getElementById("certificadoSecundaria").checked = !!persona.certificadoSecundaria;
     document.getElementById("analiticoSecundario").checked = !!persona.analiticoSecundario;
     document.getElementById("estado").value = persona.estado || "Desertor/a";
     document.getElementById("observaciones").value = persona.observaciones || "";
@@ -563,9 +567,11 @@ function guardarPersona(event) {
     nombre: document.getElementById("nombre").value.trim(),
     dni: document.getElementById("dni").value.trim(),
     fichaIngreso: document.getElementById("fichaIngreso").checked,
+    fichaSalud: document.getElementById("fichaSalud").checked,
     fotocopiaDni: document.getElementById("fotocopiaDni").checked,
     fotocopiaPartida: document.getElementById("fotocopiaPartida").checked,
     certificadoPrimaria: document.getElementById("certificadoPrimaria").checked,
+    certificadoSecundaria: document.getElementById("certificadoSecundaria").checked,
     analiticoSecundario: document.getElementById("analiticoSecundario").checked,
     estado: document.getElementById("estado").value,
     observaciones: document.getElementById("observaciones").value.trim()
@@ -622,9 +628,11 @@ function generarLogCambios(viejo, nuevo) {
     nombre: "Nombre",
     dni: "DNI",
     fichaIngreso: "Ficha de Ingreso",
+    fichaSalud: "Ficha de Salud",
     fotocopiaDni: "Fotocopia del DNI",
     fotocopiaPartida: "Partida de nacimiento",
     certificadoPrimaria: "Certificado de Primaria",
+    certificadoSecundaria: "Certificado de Secundaria",
     analiticoSecundario: "Analítico secundario",
     estado: "Estado",
     observaciones: "Observaciones"
